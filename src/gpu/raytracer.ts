@@ -9,6 +9,8 @@ export interface SphereData {
   fuzzOrIor: number;
   velocity: [number, number, number];
   elasticity: number;
+  orientation?: [number, number, number, number]; // quaternion [w, x, y, z]
+  name?: string;
 }
 
 export interface CameraData {
@@ -18,6 +20,11 @@ export interface CameraData {
   vfov: number;
   defocusAngle: number;
   focusDist: number;
+}
+
+export interface GroundData {
+  tiltX: number; // radians
+  tiltZ: number; // radians
 }
 
 export class RayTracer {
@@ -33,6 +40,8 @@ export class RayTracer {
   private height: number;
   private frameCount = 0;
   private samplesPerFrame = 4;
+  private uniformData = new ArrayBuffer(256);
+  private sphereData = new ArrayBuffer(64 * 256);
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -46,6 +55,14 @@ export class RayTracer {
     this.device = await adapter.requestDevice();
 
     const module = this.device.createShaderModule({ code: shaderCode });
+    
+    // Check shader compilation
+    const compInfo = module.getCompilationInfo();
+    compInfo.then((info) => {
+      if (info.messages.length > 0) {
+        console.error('Shader compilation errors:', info.messages.map((m) => `${m.type}: ${m.message}`).join('\n'));
+      }
+    }).catch((e) => console.error('Shader compilation info failed:', e));
 
     this.pipeline = this.device.createComputePipeline({
       layout: 'auto',
@@ -65,7 +82,7 @@ export class RayTracer {
     });
 
     this.sphereBuffer = this.device.createBuffer({
-      size: Math.max(48 * 256, 48), // max 256 spheres, 48 bytes each
+      size: Math.max(64 * 256, 64), // max 256 spheres, 64 bytes each
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 
@@ -76,7 +93,7 @@ export class RayTracer {
 
     this.accumBuffer = this.device.createBuffer({
       size: pixelCount * 16,
-      usage: GPUBufferUsage.STORAGE,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 
     this.readBuffer = this.device.createBuffer({
@@ -95,33 +112,26 @@ export class RayTracer {
     });
   }
 
+  private zeroData: Uint8Array | null = null;
+
   resetAccumulation() {
     this.frameCount = 0;
-    // Recreate accum buffer and zero it
-    this.accumBuffer.destroy();
-    this.accumBuffer = this.device.createBuffer({
-      size: this.width * this.height * 16,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    // Zero the new buffer explicitly
-    const zeroData = new Uint8Array(this.width * this.height * 16);
-    this.device.queue.writeBuffer(this.accumBuffer, 0, zeroData);
-    this.bindGroup = this.device.createBindGroup({
-      layout: this.pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: this.uniformBuffer } },
-        { binding: 1, resource: { buffer: this.sphereBuffer } },
-        { binding: 2, resource: { buffer: this.outputBuffer } },
-        { binding: 3, resource: { buffer: this.accumBuffer } },
-      ],
-    });
+    // Zero the existing buffer instead of recreating it
+    const size = this.width * this.height * 16;
+    if (!this.zeroData || this.zeroData.byteLength !== size) {
+      this.zeroData = new Uint8Array(size);
+    }
+    this.device.queue.writeBuffer(this.accumBuffer, 0, this.zeroData);
   }
 
-  async render(spheres: SphereData[], camera: CameraData): Promise<Uint8ClampedArray> {
-    // Upload uniforms
-    const uniforms = new ArrayBuffer(256);
-    const u32 = new Uint32Array(uniforms);
-    const f32 = new Float32Array(uniforms);
+  async render(
+    spheres: SphereData[],
+    camera: CameraData,
+    ground: GroundData
+  ): Promise<Uint8ClampedArray> {
+    // Upload uniforms (reuse cached buffer)
+    const u32 = new Uint32Array(this.uniformData);
+    const f32 = new Float32Array(this.uniformData);
 
     u32[0] = this.width;
     u32[1] = this.height;
@@ -147,18 +157,21 @@ export class RayTracer {
     f32[16] = camera.defocusAngle;
     // cam_focus_dist at offset 68
     f32[17] = camera.focusDist;
-    // sphere_count at offset 72
+    // sphere_count at offset 76 (u32[18])
     u32[18] = spheres.length;
+    // ground_tilt_x at offset 80 (f32[20])
+    f32[20] = ground.tiltX;
+    // ground_tilt_z at offset 84 (f32[21])
+    f32[21] = ground.tiltZ;
 
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, uniforms);
+    this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
 
-    // Upload spheres (48 bytes each: 3f center + 1f radius + 3f color + 1u material + 1f fuzz + 3f padding)
-    const sphereData = new ArrayBuffer(48 * Math.max(spheres.length, 1));
-    const sf = new Float32Array(sphereData);
-    const su = new Uint32Array(sphereData);
+    // Upload spheres (reuse cached buffer, 64 bytes each)
+    const sf = new Float32Array(this.sphereData);
+    const su = new Uint32Array(this.sphereData);
 
     for (let i = 0; i < spheres.length; i++) {
-      const base = i * 12; // 48 bytes / 4 = 12 floats
+      const base = i * 16; // 64 bytes / 4 = 16 floats
       sf[base + 0] = spheres[i].center[0];
       sf[base + 1] = spheres[i].center[1];
       sf[base + 2] = spheres[i].center[2];
@@ -171,8 +184,13 @@ export class RayTracer {
       sf[base + 9] = 0; // pad
       sf[base + 10] = 0;
       sf[base + 11] = 0;
+      const q = spheres[i].orientation ?? [1, 0, 0, 0];
+      sf[base + 12] = q[0]; // w
+      sf[base + 13] = q[1]; // x
+      sf[base + 14] = q[2]; // y
+      sf[base + 15] = q[3]; // z
     }
-    this.device.queue.writeBuffer(this.sphereBuffer, 0, sphereData);
+    this.device.queue.writeBuffer(this.sphereBuffer, 0, this.sphereData, 0, 64 * Math.max(spheres.length, 1));
 
     // Dispatch
     const encoder = this.device.createCommandEncoder();

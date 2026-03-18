@@ -25,3 +25,6 @@ dist-ssr
 
 # Biome
 .biome
+
+# Misc
+.claude/settings.local.json

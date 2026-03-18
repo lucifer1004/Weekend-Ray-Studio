@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type CameraData, RayTracer, type SphereData } from '../gpu/raytracer';
+import { type CameraData, RayTracer, type SphereData, type GroundData } from '../gpu/raytracer';
 import { orbit, pan, zoom } from '../lib/camera-controls';
 import {
   buildCameraBasis,
@@ -13,6 +13,7 @@ import {
 interface RayTracerCanvasProps {
   spheres: SphereData[];
   camera: CameraData;
+  ground: GroundData;
   width?: number;
   height?: number;
   onSphereDragEnd?: (sphereIndex: number, newCenter: [number, number, number]) => void;
@@ -33,6 +34,7 @@ interface DragState {
 export const RayTracerCanvas = ({
   spheres,
   camera,
+  ground,
   width = 800,
   height = 450,
   onSphereDragEnd,
@@ -64,8 +66,10 @@ export const RayTracerCanvas = ({
 
   const spheresRef = useRef(spheres);
   const cameraRef = useRef(camera);
+  const groundRef = useRef(ground);
   spheresRef.current = spheres;
   cameraRef.current = camera;
+  groundRef.current = ground;
 
   // Init WebGPU
   useEffect(() => {
@@ -101,7 +105,7 @@ export const RayTracerCanvas = ({
   const sceneVersionRef = useRef(0);
   useEffect(() => {
     sceneVersionRef.current++;
-  }, [spheres, camera]);
+  }, [spheres, camera, ground]);
 
   // Always reset accumulation when simulation state changes
   useEffect(() => {
@@ -148,7 +152,7 @@ export const RayTracerCanvas = ({
       }
 
       try {
-        const data = await tracer.render(spheresRef.current, cameraRef.current);
+        const data = await tracer.render(spheresRef.current, cameraRef.current, groundRef.current);
         const imageData = new ImageData(
           new Uint8ClampedArray(data.buffer as ArrayBuffer),
           width,
@@ -411,7 +415,7 @@ export const RayTracerCanvas = ({
       }
     } else if (hoveredIndex !== null && hoveredIndex >= 0 && hoveredIndex < spheres.length) {
       drawSphereHighlight(
-        spheres[hoveredIndex] as any,
+        spheres[hoveredIndex],
         selectedIndex === hoveredIndex ? 'selected' : 'hover'
       );
     } else if (
@@ -420,7 +424,7 @@ export const RayTracerCanvas = ({
       selectedIndex >= 0 &&
       selectedIndex < spheres.length
     ) {
-      drawSphereHighlight(spheres[selectedIndex] as any, 'selected');
+      drawSphereHighlight(spheres[selectedIndex], 'selected');
     }
   }, [dragState, hoveredIndex, selectedIndex, spheres, camera, width, height]);
 
@@ -451,8 +455,8 @@ export const RayTracerCanvas = ({
         return;
       }
       if (e.button !== 0) return;
-      // Disable dragging when simulating (spheres are moving) or when paused (simSpheres is frozen)
-      if (isSimulating || simSpheres !== null) return;
+      // Disable dragging while simulation is actively running
+      if (isSimulating) return;
       const [px, py] = getCanvasCoords(e);
       const cam = buildCameraBasis(camera, width, height);
       const ray = pixelToRay(cam, px, py);
@@ -471,7 +475,7 @@ export const RayTracerCanvas = ({
         onSelect?.(null);
       }
     },
-    [spheres, camera, width, height, getCanvasCoords, onSelect, isSimulating, simSpheres]
+    [spheres, camera, width, height, getCanvasCoords, onSelect, isSimulating]
   );
 
   const handleMouseMove = useCallback(
@@ -542,14 +546,22 @@ export const RayTracerCanvas = ({
     setHoveredIndex(null);
   }, [dragState, onSphereDragEnd, cameraAction]);
 
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // Attach wheel listener with passive: false to allow preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const newCam = zoom(camera, e.deltaY > 0 ? 1 : -1);
       onCameraChange?.(newCam);
-    },
-    [camera, onCameraChange]
-  );
+    };
+
+    const overlay = overlayRef.current;
+    const target = overlay ?? canvas;
+    target.addEventListener('wheel', onWheel, { passive: false });
+    return () => target.removeEventListener('wheel', onWheel);
+  }, [camera, onCameraChange]);
 
   if (!supported) {
     return (
@@ -603,7 +615,6 @@ export const RayTracerCanvas = ({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
-          onWheel={handleWheel}
           onContextMenu={(e) => e.preventDefault()}
         />
       </div>

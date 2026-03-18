@@ -12,15 +12,49 @@ interface ObjectControlsProps {
 }
 
 const MATERIAL_OPTIONS = ['lambertian', 'metal', 'dielectric'] as const;
-const MATERIAL_ICONS: Record<string, string> = {
-  lambertian: '🟤',
-  metal: '🪩',
-  dielectric: '💎',
+const MATERIAL_LABELS: Record<string, string> = {
+  lambertian: 'Matte',
+  metal: 'Metal',
+  dielectric: 'Glass',
 };
 const MATERIAL_TYPE_MAP: Record<number, string> = {
   0: 'lambertian',
   1: 'metal',
   2: 'dielectric',
+};
+
+const MaterialSwatch = ({ material, color, isGround }: { material: string; color: string; isGround: boolean }) => {
+  if (isGround) {
+    return (
+      <span
+        className="w-3 h-3 rounded-sm flex-shrink-0 border border-[var(--border-color-base)]"
+        style={{ backgroundColor: color }}
+      />
+    );
+  }
+  if (material === 'dielectric') {
+    return (
+      <span
+        className="w-3 h-3 rounded-full flex-shrink-0"
+        style={{ border: '1.5px dashed var(--text-color-secondary)' }}
+      />
+    );
+  }
+  if (material === 'metal') {
+    return (
+      <span
+        className="w-3 h-3 rounded-full flex-shrink-0"
+        style={{ backgroundColor: color, boxShadow: '0 0 0 1.5px rgba(255,255,255,0.6), 0 0 0 2.5px rgba(255,255,255,0.15)' }}
+      />
+    );
+  }
+  // lambertian
+  return (
+    <span
+      className="w-3 h-3 rounded-full flex-shrink-0 border border-[var(--border-color-base)]"
+      style={{ backgroundColor: color }}
+    />
+  );
 };
 
 function rgbToHex(r: number, g: number, b: number): string {
@@ -137,6 +171,14 @@ export const ObjectControls = ({
     onCodeChange(code.slice(0, range.start) + updated + code.slice(range.end));
   };
 
+  const updateGroundInCode = (prop: string, value: string) => {
+    const range = findTagRange(code, 'Ground', 0);
+    if (!range) return;
+    const tagStr = code.slice(range.start, range.end);
+    const updated = updateProp(tagStr, prop, value);
+    onCodeChange(code.slice(0, range.start) + updated + code.slice(range.end));
+  };
+
   const updateCameraInCode = (prop: string, value: string) => {
     const range = findTagRange(code, 'Camera', 0);
     if (!range) return;
@@ -231,8 +273,11 @@ export const ObjectControls = ({
                 : ''
             }`}
             onClick={() => {
-              onSelect(selectedIndex === -1 ? null : -1);
-              toggleCollapse(-1);
+              const selecting = selectedIndex !== -1;
+              onSelect(selecting ? -1 : null);
+              if (selecting) {
+                setCollapsed((prev) => { const next = new Set(prev); next.delete(-1); return next; });
+              }
               onScrollTo?.(-1);
             }}
           >
@@ -306,12 +351,58 @@ export const ObjectControls = ({
           )}
         </div>
 
+        {/* Ground controls */}
+        <div className="border-b border-[var(--border-color-base)]">
+          <button
+            className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-[var(--background-color-surface-raised)] transition-colors ${
+              selectedIndex === -2
+                ? 'bg-[var(--background-color-surface-raised)] ring-1 ring-inset ring-[var(--color-brand)]'
+                : ''
+            }`}
+            onClick={() => {
+              const selecting = selectedIndex !== -2;
+              onSelect(selecting ? -2 : null);
+              if (selecting) {
+                setCollapsed((prev) => { const next = new Set(prev); next.delete(-2); return next; });
+              }
+            }}
+          >
+            <span className="text-xs">{collapsed.has(-2) ? '▶' : '▼'}</span>
+            <span className="text-sm">⬜</span>
+            <span className="text-xs font-medium text-[var(--text-color-primary)]">Ground Tilt</span>
+          </button>
+          {!collapsed.has(-2) && selectedIndex === -2 && (
+            <div className="px-3 pb-2 space-y-1.5">
+              <div className="text-[10px] text-[var(--text-color-secondary)] font-medium mt-1">
+                Tilt Angle (degrees)
+              </div>
+              <Slider
+                label="X"
+                value={scene.ground.tiltX * (180 / Math.PI)}
+                min={-45}
+                max={45}
+                step={1}
+                onChange={(v) => updateGroundInCode('tiltX', String(v))}
+              />
+              <Slider
+                label="Z"
+                value={scene.ground.tiltZ * (180 / Math.PI)}
+                min={-45}
+                max={45}
+                step={1}
+                onChange={(v) => updateGroundInCode('tiltZ', String(v))}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Sphere controls */}
         {scene.spheres.map((sphere, i) => {
           const isSelected = selectedIndex === i;
           const isCollapsed = collapsed.has(i);
           const colorHex = rgbToHex(sphere.color[0], sphere.color[1], sphere.color[2]);
-          const label = sphere.radius >= 100 ? 'Ground' : `Sphere ${i + 1}`;
+          const isGround = sphere.radius >= 100;
+          const label = sphere.name || (isGround ? 'Ground' : `Sphere ${i + 1}`);
           const matName = MATERIAL_TYPE_MAP[sphere.materialType] || 'lambertian';
 
           return (
@@ -333,36 +424,47 @@ export const ObjectControls = ({
                 }}
               >
                 <span className="text-xs">{isSelected && !isCollapsed ? '▼' : '▶'}</span>
-                <span
-                  className="w-3 h-3 rounded-full flex-shrink-0 border border-[var(--border-color-base)]"
-                  style={{ backgroundColor: colorHex }}
-                />
+                <MaterialSwatch material={matName} color={colorHex} isGround={isGround} />
                 <span className="text-xs font-medium text-[var(--text-color-primary)] flex-1">
-                  {MATERIAL_ICONS[matName]} {label}
+                  {label}
                 </span>
-                {/* biome-ignore lint/a11y/useSemanticElements: cannot nest button inside button */}
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteSphere(i);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                {!isGround && (
+                  // biome-ignore lint/a11y/useSemanticElements: cannot nest button inside button
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
                       e.stopPropagation();
                       deleteSphere(i);
-                    }
-                  }}
-                  className="text-[10px] text-[var(--text-color-secondary)] hover:text-red-400 px-1 cursor-pointer"
-                  title="Delete"
-                >
-                  ✕
-                </span>
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.stopPropagation();
+                        deleteSphere(i);
+                      }
+                    }}
+                    className="text-[10px] text-[var(--text-color-secondary)] hover:text-red-400 px-1 cursor-pointer"
+                    title="Delete"
+                  >
+                    ✕
+                  </span>
+                )}
               </button>
 
               {isSelected && !isCollapsed && (
                 <div className="px-3 pb-2 space-y-1.5">
+                  {/* Name */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-[var(--text-color-secondary)] w-10">Name</span>
+                    <input
+                      type="text"
+                      value={sphere.name || ''}
+                      placeholder={isGround ? 'Ground' : `Sphere ${i + 1}`}
+                      onChange={(e) => updateSphereInCode(i, 'name', `"${e.target.value}"`)}
+                      className="flex-1 text-[10px] px-1 py-0.5 rounded bg-[var(--background-color-surface-sunken)] border border-[var(--border-color-base)] text-[var(--text-color-primary)]"
+                    />
+                  </div>
+
                   {/* Material */}
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-[var(--text-color-secondary)] w-10">Mat</span>
@@ -373,7 +475,7 @@ export const ObjectControls = ({
                     >
                       {MATERIAL_OPTIONS.map((m) => (
                         <option key={m} value={m}>
-                          {MATERIAL_ICONS[m]} {m}
+                          {MATERIAL_LABELS[m]}
                         </option>
                       ))}
                     </select>

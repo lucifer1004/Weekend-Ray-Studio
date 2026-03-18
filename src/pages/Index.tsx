@@ -8,6 +8,7 @@ import type { CameraData, SphereData } from '../gpu/raytracer';
 import { createPhysicsState, type PhysicsState, stepPhysics } from '../lib/physics';
 import { DEFAULT_SCENE, parseSceneDSL } from '../lib/scene-dsl';
 
+
 function useDraggableDivider(initialWidth: number, minWidth: number, maxWidth: number) {
   const [width, setWidth] = useState(initialWidth);
   const dragging = useRef(false);
@@ -105,6 +106,14 @@ const Index = () => {
 
   const handleSphereDragEnd = useCallback(
     (sphereIndex: number, newCenter: [number, number, number]) => {
+      // If paused with simSpheres, update the simulated positions directly
+      setSimSpheres((prev) => {
+        if (!prev) return prev;
+        return prev.map((s, i) =>
+          i === sphereIndex ? { ...s, center: newCenter } : s
+        );
+      });
+
       const currentCode = codeRef.current;
       const re = /<Sphere\s[^/]*?\/>/gs;
       let m: RegExpExecArray | null;
@@ -203,7 +212,7 @@ const Index = () => {
       const dt = Math.min((now - lastTimeRef.current) / 1000, 0.05);
       lastTimeRef.current = now;
 
-      const updated = stepPhysics(physicsRef.current, scene.spheres, dt);
+      const updated = stepPhysics(physicsRef.current, scene.spheres, scene.ground, dt);
       setSimSpheres(updated);
 
       simAnimRef.current = requestAnimationFrame(loop);
@@ -214,7 +223,7 @@ const Index = () => {
       running = false;
       cancelAnimationFrame(simAnimRef.current);
     };
-  }, [isSimulating, scene.spheres]);
+  }, [isSimulating, scene.spheres, scene.ground]);
 
   return (
     <div className="h-screen flex flex-col bg-[var(--background-color-surface-base)]">
@@ -305,6 +314,7 @@ const Index = () => {
           <RayTracerCanvas
             spheres={activeSpheres}
             camera={activeCamera}
+            ground={scene.ground}
             width={800}
             height={450}
             onSphereDragEnd={handleSphereDragEnd}

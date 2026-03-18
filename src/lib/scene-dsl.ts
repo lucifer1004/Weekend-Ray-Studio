@@ -1,8 +1,14 @@
 import type { CameraData, SphereData } from '../gpu/raytracer';
 
+export interface GroundSettings {
+  tiltX: number; // Tilt angle around X axis (radians)
+  tiltZ: number; // Tilt angle around Z axis (radians)
+}
+
 export interface ParsedScene {
   spheres: SphereData[];
   camera: CameraData;
+  ground: GroundSettings;
   errors: string[];
 }
 
@@ -40,6 +46,16 @@ export function parseSceneDSL(code: string): ParsedScene {
   const errors: string[] = [];
   const spheres: SphereData[] = [];
   const camera = { ...DEFAULT_CAMERA };
+  const ground: GroundSettings = { tiltX: 0, tiltZ: 0 };
+
+  // Parse <Ground ... />
+  const groundRe = /<Ground\s+([^/]*?)\/>/gs;
+  let gm: RegExpExecArray | null;
+  while ((gm = groundRe.exec(code)) !== null) {
+    const props = parseProps(gm[1]);
+    if (props.tiltX) ground.tiltX = (parseFloat(props.tiltX) || 0) * (Math.PI / 180); // Convert deg to rad
+    if (props.tiltZ) ground.tiltZ = (parseFloat(props.tiltZ) || 0) * (Math.PI / 180);
+  }
 
   // Parse <Camera ... />
   const cameraRe = /<Camera\s+([^/]*?)\/>/gs;
@@ -91,8 +107,9 @@ export function parseSceneDSL(code: string): ParsedScene {
       0, 0, 0,
     ];
     const elasticity = parseFloat(props.elasticity || '0.8');
+    const name = props.name ? props.name.replace(/['"]/g, '') : undefined;
 
-    spheres.push({ center, radius, color, materialType, fuzzOrIor, velocity, elasticity });
+    spheres.push({ center, radius, color, materialType, fuzzOrIor, velocity, elasticity, name });
   }
 
   if (spheres.length === 0) {
@@ -118,10 +135,13 @@ export function parseSceneDSL(code: string): ParsedScene {
     }
   }
 
-  return { spheres, camera, errors };
+  return { spheres, camera, ground, errors };
 }
 
 export const DEFAULT_SCENE = `<Scene>
+  {/* Ground - tilt angles in degrees */}
+  <Ground tiltX={0} tiltZ={0} />
+
   {/* Camera */}
   <Camera
     origin={[13, 2, 3]}
@@ -133,6 +153,7 @@ export const DEFAULT_SCENE = `<Scene>
 
   {/* Ground */}
   <Sphere
+    name="Ground"
     center={[0, -1000, 0]}
     radius={1000}
     material="lambertian"
@@ -141,6 +162,7 @@ export const DEFAULT_SCENE = `<Scene>
 
   {/* Glass ball */}
   <Sphere
+    name="Glass Ball"
     center={[0, 1, 0]}
     radius={1}
     material="dielectric"
@@ -151,6 +173,7 @@ export const DEFAULT_SCENE = `<Scene>
 
   {/* Matte ball */}
   <Sphere
+    name="Matte Ball"
     center={[-4, 1, 0]}
     radius={1}
     material="lambertian"
@@ -161,6 +184,7 @@ export const DEFAULT_SCENE = `<Scene>
 
   {/* Metal ball */}
   <Sphere
+    name="Metal Ball"
     center={[4, 1, 0]}
     radius={1}
     material="metal"
@@ -171,10 +195,10 @@ export const DEFAULT_SCENE = `<Scene>
   />
 
   {/* Small spheres */}
-  <Sphere center={[1, 0.3, -1]} radius={0.3} material="metal" color={[0.9, 0.2, 0.2]} fuzz={0.1} velocity={[0, 2, 0]} elasticity={0.8} />
-  <Sphere center={[-1, 0.3, 1]} radius={0.3} material="lambertian" color={[0.2, 0.8, 0.2]} velocity={[1, 3, -1]} elasticity={0.75} />
-  <Sphere center={[2, 0.25, 1.5]} radius={0.25} material="dielectric" ior={1.5} velocity={[-1, 1, 0]} elasticity={0.9} />
-  <Sphere center={[-2, 0.35, -0.5]} radius={0.35} material="metal" color={[0.8, 0.8, 0.2]} fuzz={0.3} velocity={[0, 0, 2]} elasticity={0.6} />
-  <Sphere center={[0.5, 0.2, 2]} radius={0.2} material="lambertian" color={[0.1, 0.3, 0.8]} velocity={[0, 6, 0]} elasticity={0.95} />
+  <Sphere name="Red Marble" center={[1, 0.3, -1]} radius={0.3} material="metal" color={[0.9, 0.2, 0.2]} fuzz={0.1} velocity={[0, 2, 0]} elasticity={0.8} />
+  <Sphere name="Green Pea" center={[-1, 0.3, 1]} radius={0.3} material="lambertian" color={[0.2, 0.8, 0.2]} velocity={[1, 3, -1]} elasticity={0.75} />
+  <Sphere name="Glass Bead" center={[2, 0.25, 1.5]} radius={0.25} material="dielectric" ior={1.5} velocity={[-1, 1, 0]} elasticity={0.9} />
+  <Sphere name="Gold Nugget" center={[-2, 0.35, -0.5]} radius={0.35} material="metal" color={[0.8, 0.8, 0.2]} fuzz={0.3} velocity={[0, 0, 2]} elasticity={0.6} />
+  <Sphere name="Blue Drop" center={[0.5, 0.2, 2]} radius={0.2} material="lambertian" color={[0.1, 0.3, 0.8]} velocity={[0, 6, 0]} elasticity={0.95} />
 </Scene>
 `;

@@ -12,6 +12,10 @@ struct Uniforms {
   cam_defocus_angle: f32,
   cam_focus_dist: f32,
   sphere_count: u32,
+  ground_tilt_x: f32,
+  ground_tilt_z: f32,
+  _pad1: f32,
+  _pad2: f32,
 }
 
 struct Sphere {
@@ -23,7 +27,12 @@ struct Sphere {
   _pad0: f32,
   _pad1: f32,
   _pad2: f32,
+  orientation: vec4f, // quaternion (w, x, y, z)
 }
+
+// Ground plane constants
+const GROUND_RADIUS_THRESHOLD: f32 = 100.0;
+const GROUND_COLOR: vec3f = vec3f(0.5, 0.5, 0.5);
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<storage, read> spheres: array<Sphere>;
@@ -115,11 +124,66 @@ fn hit_sphere(s: Sphere, r: Ray, t_min: f32, t_max: f32, rec: ptr<function, HitR
   return true;
 }
 
+// Check hit with tilted infinite ground plane
+// Returns t value if hit, -1 if no hit
+fn hit_ground_plane(r: Ray, t_min: f32, t_max: f32) -> f32 {
+  // Ground plane: y - x*sin(tiltZ) - z*sin(tiltX) = 0
+  // Normal: n = normalize(-sin(tiltZ), 1, -sin(tiltX))
+  let tiltX = uniforms.ground_tilt_x;
+  let tiltZ = uniforms.ground_tilt_z;
+  
+  let nx = -sin(tiltZ);
+  let ny = 1.0;
+  let nz = -sin(tiltX);
+  let normal_len = sqrt(nx*nx + ny*ny + nz*nz);
+  let normal = vec3f(nx/normal_len, ny/normal_len, nz/normal_len);
+  
+  // Ray-plane intersection
+  let denom = dot(r.dir, normal);
+  if abs(denom) < 1e-6 {
+    return -1.0; // Ray parallel to plane
+  }
+  
+  // Plane passes through origin: dot(p, n) = 0
+  let t = -dot(r.origin, normal) / denom;
+  
+  if t < t_min || t > t_max {
+    return -1.0;
+  }
+  
+  return t;
+}
+
 fn hit_world(r: Ray, t_min: f32, t_max: f32, rec: ptr<function, HitRecord>) -> bool {
   var hit_anything = false;
   var closest = t_max;
+  
+  // Check ground plane first (at y = 0, tilted)
+  let ground_t = hit_ground_plane(r, t_min, closest);
+  if ground_t > 0.0 {
+    hit_anything = true;
+    closest = ground_t;
+    (*rec).t = ground_t;
+    (*rec).p = ray_at(r, ground_t);
+    (*rec).front_face = true;
+    // Use ground plane normal
+    let tiltX = uniforms.ground_tilt_x;
+    let tiltZ = uniforms.ground_tilt_z;
+    let nx = -sin(tiltZ);
+    let ny = 1.0;
+    let nz = -sin(tiltX);
+    let len = sqrt(nx*nx + ny*ny + nz*nz);
+    (*rec).normal = vec3f(nx/len, ny/len, nz/len);
+    // Mark as ground hit (special sphere_idx)
+    (*rec).sphere_idx = 0xffffffffu;
+  }
+  
   let count = uniforms.sphere_count;
   for (var i = 0u; i < count; i++) {
+    // Skip large ground spheres - rendered as tilted plane instead
+    if spheres[i].radius >= GROUND_RADIUS_THRESHOLD {
+      continue;
+    }
     var temp_rec: HitRecord;
     if hit_sphere(spheres[i], r, t_min, closest, &temp_rec) {
       hit_anything = true;
@@ -137,6 +201,29 @@ fn reflectance(cosine: f32, ior: f32) -> f32 {
   return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
 }
 
+// Rotate vector by inverse of quaternion q = (w, x, y, z)
+fn quat_rotate_inv(q: vec4f, v: vec3f) -> vec3f {
+  // Conjugate rotation: q* = (w, -x, -y, -z)
+  let qv = vec3f(-q.y, -q.z, -q.w);
+  let t = 2.0 * cross(qv, v);
+  return v + q.x * t + cross(qv, t);
+}
+
+// UV grid lines on sphere surface using orientation
+fn sphere_grid(s: Sphere, hit_point: vec3f) -> f32 {
+  let local_dir = normalize(hit_point - s.center);
+  let rotated = quat_rotate_inv(s.orientation, local_dir);
+  let theta = acos(clamp(rotated.y, -1.0, 1.0));
+  let phi = atan2(rotated.z, rotated.x) + 3.14159265;
+  // 8 longitude lines, 4 latitude lines
+  let line_width = 0.06;
+  let u_frac = fract(phi * 4.0 / 3.14159265);
+  let v_frac = fract(theta * 4.0 / 3.14159265);
+  let on_u = f32(u_frac < line_width || u_frac > (1.0 - line_width));
+  let on_v = f32(v_frac < line_width || v_frac > (1.0 - line_width));
+  return max(on_u, on_v);
+}
+
 fn ray_color(initial_ray: Ray) -> vec3f {
   var r = initial_ray;
   var color = vec3f(1.0);
@@ -151,25 +238,45 @@ fn ray_color(initial_ray: Ray) -> vec3f {
       return color * sky;
     }
     
-    let s = spheres[rec.sphere_idx];
-    
-    if s.material_type == 0u {
-      // Lambertian
+    // Check if we hit the ground plane
+    if rec.sphere_idx == 0xffffffffu {
+      // Checkerboard pattern based on world-space xz coordinates
+      let checker = floor(rec.p.x) + floor(rec.p.z);
+      let is_even = (i32(checker) % 2 + 2) % 2; // safe modulo for negatives
+      let ground_col = select(vec3f(0.9, 0.9, 0.9), vec3f(0.2, 0.2, 0.2), is_even == 0);
+
       var scatter_dir = rec.normal + rand_unit_vector();
       if length(scatter_dir) < 1e-8 {
         scatter_dir = rec.normal;
       }
       r = Ray(rec.p, scatter_dir);
-      color *= s.color;
+      color = color * ground_col;
+      continue;
+    }
+    
+    let s = spheres[rec.sphere_idx];
+    
+    if s.material_type == 0u {
+      // Lambertian with checkerboard
+      let grid = sphere_grid(s, rec.p);
+      let sphere_col = mix(s.color, s.color * 0.3, grid);
+      var scatter_dir = rec.normal + rand_unit_vector();
+      if length(scatter_dir) < 1e-8 {
+        scatter_dir = rec.normal;
+      }
+      r = Ray(rec.p, scatter_dir);
+      color *= sphere_col;
     } else if s.material_type == 1u {
-      // Metal
+      // Metal with checkerboard
+      let grid = sphere_grid(s, rec.p);
+      let sphere_col = mix(s.color, s.color * 0.3, grid);
       let reflected = reflect(normalize(r.dir), rec.normal);
       let scattered_dir = reflected + s.fuzz_or_ior * rand_in_unit_sphere();
       if dot(scattered_dir, rec.normal) <= 0.0 {
         return vec3f(0.0);
       }
       r = Ray(rec.p, scattered_dir);
-      color *= s.color;
+      color *= sphere_col;
     } else {
       // Dielectric
       let ri = select(s.fuzz_or_ior, 1.0 / s.fuzz_or_ior, rec.front_face);

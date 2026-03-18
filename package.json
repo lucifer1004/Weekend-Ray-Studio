@@ -18,6 +18,8 @@
     "@nvidia/foundations-react-core": "^0.600.0",
     "@tanstack/react-query": "^5.83.0",
     "@webgpu/types": "^0.1.69",
+    "baseline-browser-mapping": "^2.10.8",
+    "caniuse-lite": "^1.0.30001780",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.577.0",
