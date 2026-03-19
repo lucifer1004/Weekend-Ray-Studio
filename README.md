@@ -1,59 +1,80 @@
-# NVIDIA Kaizen UI Design Library
+# Weekend Ray Studio
 
-This is a Design Library project for NVIDIA's Kaizen UI (KUI) design system.
+A real-time WebGPU path tracer with an interactive scene editor, physics simulation, and rolling ball dynamics — built entirely with AI agents for NVIDIA AI Hackathon Week 1.
 
-## Setup
+**Team Steins; Gate** | [Live Demo](https://weekend-ray-studio.lovable.app) | Theme: *The Agentic Builder*
 
-### NPM Registry Configuration
+## Features
 
-This project uses NVIDIA's private npm registry. The `.npmrc` file is configured:
+- **GPU Ray Tracing** — WGSL compute shader with 12-bounce path tracing, progressive accumulation, Lambertian/Metal/Dielectric materials, reflections, refractions, and soft shadows
+- **Scene DSL** — Write scenes in a JSX-like language (`<Sphere>`, `<Camera>`, `<Ground>`) with live preview in a Monaco editor
+- **Direct Manipulation** — Click and drag spheres in the viewport, adjust properties via sidebar controls, orbit/zoom/pan the camera
+- **Physics Simulation** — Elastic sphere collisions, gravity, ground bounce with configurable velocity and elasticity per sphere
+- **Rolling Dynamics** — Quaternion-based orientation tracking with UV grid lines to visualize rotation
+- **Tilted Ground** — Adjustable ground plane tilt with proper normal-space friction and collision
 
-```
-@kui:registry=https://edge.urm.nvidia.com/artifactory/api/npm/sw-ngc-cloud-npm-local/
-@nv-brand-assets:registry=https://edge.urm.nvidia.com/artifactory/api/npm/sw-ngc-cloud-npm-local/
-//edge.urm.nvidia.com/artifactory/api/npm/sw-ngc-cloud-npm-local/:_authToken=${NVIDIA_EDGE_NPM_TOKEN}
-//edge.urm.nvidia.com/artifactory/api/npm/sw-ngc-cloud-npm-local/:email=colep@nvidia.com
-//edge.urm.nvidia.com/artifactory/api/npm/sw-ngc-cloud-npm-local/:always-auth=true
-```
+## How It Was Built
 
-The `NVIDIA_EDGE_NPM_TOKEN` must be set as a build secret in Workspace Settings → Build Secrets.
+This project demonstrates agentic software development:
 
-### Install Dependencies
+1. **Lovable** (Mar 16–17) — Generated the full app scaffold from conversational prompts: WebGPU ray tracer, Monaco editor, React UI, physics engine, camera controls
+2. **Claude Code** (Mar 19) — Refined physics (quaternion rolling, tilted-plane collisions), fixed shader bugs (uniform alignment, friction math), built the demo video template, generated TTS voiceover
+
+Even the demo video was built by Claude Code — a Remotion template with config-driven scenes, per-segment TTS audio, and auto-computed clip playback rates.
+
+## Getting Started
 
 ```bash
-npm install @kui/foundations-react @kui/foundations-tailwind-plugin
+# Install dependencies
+bun install
+
+# Start dev server
+bun run dev
 ```
 
-## Documentation Structure
+Requires **WebGPU** support (Chrome 113+ / Edge 113+).
 
-### `.lovable/system.md`
+### Controls
 
-The main knowledge file for AI agents. Contains:
-- Installation & setup instructions
-- Best practices and guidelines
-- Theme variables and color palette
-- Component reference with URLs for on-demand docs
+| Action | Input |
+|---|---|
+| Select/drag sphere | Left-click |
+| Orbit camera | Right-click drag |
+| Zoom | Scroll wheel |
+| Pan | Shift + right-click drag |
+| Play/Pause physics | Play button in header |
 
-### Component Documentation
+## Demo Video
 
-Individual component docs are hosted at:
+The `demo-video/` directory contains a reusable Remotion template for producing hackathon demo videos.
+
+```bash
+cd demo-video
+bun install
+bun run studio    # Preview in browser
+bun run render    # Export to out/demo.mp4
 ```
-https://webassets.nvidia.com/kaizen-ui-foundations/docs/components/{ComponentName}.md
+
+Edit `src/demo.config.ts` to customize scenes, clips, subtitles, and voiceover.
+
+### Voice Generation
+
+Generate TTS voiceover using a local Qwen3-TTS model with voice cloning:
+
+```bash
+# Set QWEN3_TTS_MODEL_PATH in .env (or use HuggingFace ID as fallback)
+pixi run python3 voice/generate_voiceover_local.py test       # Quick test
+pixi run python3 voice/generate_voiceover_local.py generate   # All segments
 ```
 
-**Traversal Instructions for LLMs:**
-1. Before implementing any KUI component, fetch its documentation from the URL above
-2. Each doc contains: description, examples (copy-paste ready), and props table
-3. Use the examples as templates - they are tested and correct
+## Tech Stack
 
-### Additional Resources
+- **Frontend** — React, TypeScript, Vite, Tailwind CSS, Monaco Editor
+- **GPU** — WebGPU compute shaders (WGSL)
+- **Physics** — Fixed-timestep simulation, impulse-based collisions, quaternion orientation
+- **Demo Video** — Remotion, GLM/Qwen3-TTS voice cloning
+- **AI Agents** — Lovable (scaffold), Claude Code (refinement)
 
-- Full foundations doc: `https://webassets.nvidia.com/kaizen-ui-foundations/docs/llms.md`
-- Installation guide: `https://webassets.nvidia.com/kaizen-ui-foundations/docs/installation.md`
-- Icon list: `https://webassets.nvidia.com/kaizen-ui-foundations/docs/icon-list.md`
+## License
 
-## Technologies
-
-- Vite + React + TypeScript
-- Kaizen UI (`@kui/foundations-react`)
-- Tailwind CSS with KUI plugin (`@kui/foundations-tailwind-plugin`)
+MIT

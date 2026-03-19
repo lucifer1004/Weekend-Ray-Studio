@@ -1,0 +1,20 @@
+[workspace]
+authors = ["Gabriel Wu <13583761+lucifer1004@users.noreply.github.com>"]
+channels = ["conda-forge"]
+name = "Weekend-Ray-Studio"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[system-requirements]
+macos = "15.0"
+
+[tasks]
+
+[dependencies]
+requests = ">=2.32.5,<3"
+python-dotenv = ">=1.2.2,<2"
+python = "3.12.*"
+speechrecognition = ">=3.15.1,<4"
+
+[pypi-dependencies]
+mlx-audio = ">=0.4.1, <0.5"

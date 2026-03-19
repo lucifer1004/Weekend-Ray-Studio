@@ -88,6 +88,7 @@ export const FeatureScene: React.FC<FeatureSceneProps> = ({ config }) => {
         >
           <Video
             src={staticFile(config.clip)}
+            playbackRate={config.clipSpeed ?? 1}
             style={{
               width: "100%",
               height: "100%",

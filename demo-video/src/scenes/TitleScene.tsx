@@ -1,4 +1,9 @@
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  interpolate,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { FadeIn } from "../components/FadeIn";
 import { meta } from "../demo.config";
 import { theme } from "../lib/theme";
@@ -7,7 +12,6 @@ export const TitleScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  // Fade out near the end
   const fadeOut = interpolate(
     frame,
     [durationInFrames - fps, durationInFrames],
@@ -26,21 +30,45 @@ export const TitleScene: React.FC = () => {
         opacity: fadeOut,
       }}
     >
-      {/* Decorative accent line */}
-      <FadeIn delay={10} duration={20}>
+      {/* Event badge */}
+      <FadeIn delay={5} duration={15} slideUp={10}>
         <div
           style={{
-            width: 60,
-            height: 3,
             background: theme.colors.primary,
-            borderRadius: 2,
+            color: theme.colors.background,
+            fontSize: 16,
+            fontFamily: theme.fonts.mono,
+            fontWeight: 700,
+            padding: "6px 16px",
+            borderRadius: 6,
             marginBottom: 32,
+            textTransform: "uppercase",
+            letterSpacing: 2,
           }}
-        />
+        >
+          {meta.event}
+        </div>
+      </FadeIn>
+
+      {/* Theme */}
+      <FadeIn delay={10} duration={15} slideUp={10}>
+        <p
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: 20,
+            fontFamily: theme.fonts.mono,
+            fontWeight: 500,
+            margin: 0,
+            marginBottom: 12,
+            letterSpacing: 1,
+          }}
+        >
+          {meta.theme}
+        </p>
       </FadeIn>
 
       {/* Title */}
-      <FadeIn delay={15} duration={20} slideUp={30}>
+      <FadeIn delay={20} duration={20} slideUp={30}>
         <h1
           style={{
             color: theme.colors.text,
@@ -56,34 +84,82 @@ export const TitleScene: React.FC = () => {
       </FadeIn>
 
       {/* Subtitle */}
-      <FadeIn delay={30} duration={20} slideUp={20}>
+      <FadeIn delay={35} duration={20} slideUp={20}>
         <p
           style={{
             color: theme.colors.textMuted,
-            fontSize: 32,
+            fontSize: 30,
             fontFamily: theme.fonts.body,
             fontWeight: 400,
             margin: 0,
-            marginTop: 16,
+            marginTop: 12,
           }}
         >
           {meta.subtitle}
         </p>
       </FadeIn>
 
-      {/* Event / author */}
-      <FadeIn delay={45} duration={20} slideUp={10}>
+      {/* Divider */}
+      <FadeIn delay={50} duration={15}>
+        <div
+          style={{
+            width: 60,
+            height: 3,
+            background: theme.colors.primary,
+            borderRadius: 2,
+            marginTop: 40,
+            marginBottom: 32,
+          }}
+        />
+      </FadeIn>
+
+      {/* Team name */}
+      <FadeIn delay={55} duration={20} slideUp={15}>
         <p
           style={{
-            color: theme.colors.primary,
-            fontSize: 22,
-            fontFamily: theme.fonts.mono,
-            fontWeight: 500,
+            color: theme.colors.text,
+            fontSize: 28,
+            fontFamily: theme.fonts.heading,
+            fontWeight: 600,
             margin: 0,
-            marginTop: 48,
           }}
         >
-          {meta.event} — {meta.author}
+          Team {meta.author}
+        </p>
+      </FadeIn>
+
+      {/* Members */}
+      <FadeIn delay={65} duration={15} slideUp={10}>
+        <p
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: 22,
+            fontFamily: theme.fonts.body,
+            margin: 0,
+            marginTop: 8,
+          }}
+        >
+          {meta.members.join(" · ")}
+        </p>
+      </FadeIn>
+
+      {/* Problem statement */}
+      <FadeIn delay={fps * 3} duration={20} slideUp={15}>
+        <p
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: 22,
+            fontFamily: theme.fonts.body,
+            fontWeight: 400,
+            fontStyle: "italic",
+            margin: 0,
+            marginTop: 40,
+            maxWidth: 800,
+            textAlign: "center",
+            lineHeight: 1.5,
+          }}
+        >
+          "{meta.problem}"
         </p>
       </FadeIn>
     </AbsoluteFill>

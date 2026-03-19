@@ -162,12 +162,12 @@ export class RayTracer {
     f32[16] = camera.defocusAngle;
     // cam_focus_dist at offset 68
     f32[17] = camera.focusDist;
-    // sphere_count at offset 76 (u32[18])
+    // sphere_count at offset 72 (u32[18])
     u32[18] = spheres.length;
-    // ground_tilt_x at offset 80 (f32[20])
-    f32[20] = ground.tiltX;
-    // ground_tilt_z at offset 84 (f32[21])
-    f32[21] = ground.tiltZ;
+    // ground_tilt_x at offset 76 (f32[19])
+    f32[19] = ground.tiltX;
+    // ground_tilt_z at offset 80 (f32[20])
+    f32[20] = ground.tiltZ;
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
 
