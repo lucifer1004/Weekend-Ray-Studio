@@ -1,13 +1,11 @@
-import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { AnnotationPosition } from "../demo.config";
 import { theme } from "../lib/theme";
 
 interface AnnotationProps {
   text: string;
   position: AnnotationPosition;
-  /** Frame when this annotation appears (relative to scene start) */
   showAt: number;
-  /** How many frames to show */
   duration: number;
 }
 
@@ -26,22 +24,30 @@ export const Annotation: React.FC<AnnotationProps> = ({
   duration,
 }) => {
   const frame = useCurrentFrame();
-  const fadeIn = 10;
-  const fadeOut = 10;
+  const { fps } = useVideoConfig();
 
   if (frame < showAt || frame > showAt + duration) return null;
 
   const localFrame = frame - showAt;
-  const opacity = interpolate(
-    localFrame,
-    [0, fadeIn, duration - fadeOut, duration],
-    [0, 1, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-  const slideX = interpolate(localFrame, [0, fadeIn], [20, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
+
+  // Spring entrance
+  const entrance = spring({
+    frame: localFrame,
+    fps,
+    config: { damping: 14, mass: 0.5, stiffness: 120 },
   });
+
+  // Smooth exit
+  const fadeOut = interpolate(
+    localFrame,
+    [duration - 15, duration],
+    [1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
+  );
+
+  const opacity = Math.min(entrance, fadeOut);
+  const slideX = 25 * (1 - entrance);
+  const scale = 0.95 + 0.05 * entrance;
 
   return (
     <div
@@ -51,8 +57,8 @@ export const Annotation: React.FC<AnnotationProps> = ({
         opacity,
         transform:
           position === "center"
-            ? `translate(-50%, -50%) translateX(${slideX}px)`
-            : `translateX(${slideX}px)`,
+            ? `translate(-50%, -50%) translateX(${slideX}px) scale(${scale})`
+            : `translateX(${slideX}px) scale(${scale})`,
         zIndex: 10,
       }}
     >

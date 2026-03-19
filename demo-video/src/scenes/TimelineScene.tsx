@@ -1,6 +1,7 @@
 import {
   AbsoluteFill,
   interpolate,
+  spring,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
@@ -21,23 +22,31 @@ const GRID_POSITIONS: [number, number][] = [
 
 const MilestoneCard: React.FC<{
   milestone: TimelineMilestone;
-  progress: number;
-}> = ({ milestone, progress }) => {
-  const opacity = interpolate(progress, [0, 0.3], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
+  /** Frame when this card should appear */
+  enterFrame: number;
+}> = ({ milestone, enterFrame }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  // Spring-based entrance
+  const entrance = spring({
+    frame: frame - enterFrame,
+    fps,
+    config: { damping: 14, mass: 0.7, stiffness: 100 },
   });
-  const scale = interpolate(progress, [0, 0.3], [0.92, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const opacity = Math.max(0, entrance);
+  const scale = 0.85 + 0.15 * entrance;
+  const translateY = 30 * (1 - entrance);
+
+  // Progress for staggered children (0→1 over the card's visible time)
+  const progress = Math.max(0, (frame - enterFrame) / (fps * 4));
   const accentColor = milestone.color ?? theme.colors.primary;
 
   return (
     <div
       style={{
         opacity,
-        transform: `scale(${scale})`,
+        transform: `scale(${scale}) translateY(${translateY}px)`,
         display: "flex",
         flexDirection: "column",
         background: theme.colors.surface,
@@ -96,12 +105,12 @@ const MilestoneCard: React.FC<{
         {milestone.metrics && milestone.metrics.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 110 }}>
             {milestone.metrics.map((metric, mi) => {
-              const metricProgress = interpolate(
-                progress,
-                [0.15 + mi * 0.08, 0.35 + mi * 0.08],
-                [0, 1],
-                { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-              );
+              const metricSpring = spring({
+                frame: frame - enterFrame - Math.round(fps * (0.3 + mi * 0.15)),
+                fps,
+                config: { damping: 10, mass: 0.5, stiffness: 150 },
+              });
+              const metricProgress = Math.max(0, metricSpring);
               return (
                 <div
                   key={mi}
@@ -145,12 +154,12 @@ const MilestoneCard: React.FC<{
         {/* Right column: details */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
           {milestone.details.map((detail, di) => {
-            const detailProgress = interpolate(
-              progress,
-              [0.2 + di * 0.1, 0.4 + di * 0.1],
-              [0, 1],
-              { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-            );
+            const detailSpring = spring({
+              frame: frame - enterFrame - Math.round(fps * (0.4 + di * 0.2)),
+              fps,
+              config: { damping: 15, mass: 0.6, stiffness: 120 },
+            });
+            const detailProgress = Math.max(0, detailSpring);
             return (
               <div
                 key={di}
@@ -192,12 +201,12 @@ const MilestoneCard: React.FC<{
       {milestone.tags && milestone.tags.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
           {milestone.tags.map((tag, ti) => {
-            const tagProgress = interpolate(
-              progress,
-              [0.5 + ti * 0.06, 0.65 + ti * 0.06],
-              [0, 1],
-              { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-            );
+            const tagSpring = spring({
+              frame: frame - enterFrame - Math.round(fps * (1.0 + ti * 0.1)),
+              fps,
+              config: { damping: 12, mass: 0.4, stiffness: 180 },
+            });
+            const tagProgress = Math.max(0, tagSpring);
             return (
               <span
                 key={ti}
@@ -303,12 +312,13 @@ export const TimelineScene: React.FC<TimelineSceneProps> = ({ milestones }) => {
           />
           {milestones.slice(0, 4).map((_, i) => {
             const dotPos = ((i + 0.5) / Math.max(milestones.length, 1)) * 100;
-            const dotProgress = interpolate(
-              progress,
-              [entryFractions[i] ?? 0, (entryFractions[i] ?? 0) + 0.05],
-              [0, 1],
-              { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-            );
+            const entryFrame = Math.round((entryFractions[i] ?? 0) * durationInFrames);
+            const dotSpring = spring({
+              frame: frame - entryFrame,
+              fps,
+              config: { damping: 8, mass: 0.3, stiffness: 200 },
+            });
+            const dotProgress = Math.max(0, dotSpring);
             return (
               <div
                 key={i}
@@ -342,12 +352,7 @@ export const TimelineScene: React.FC<TimelineSceneProps> = ({ milestones }) => {
       >
         {milestones.slice(0, 4).map((ms, i) => {
           const [row, col] = GRID_POSITIONS[i];
-          const cardProgress = interpolate(
-            progress,
-            [entryFractions[i] ?? 0, (entryFractions[i] ?? 0) + 0.18],
-            [0, 1],
-            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-          );
+          const entryFrame = Math.round((entryFractions[i] ?? 0) * durationInFrames);
 
           return (
             <div
@@ -358,7 +363,7 @@ export const TimelineScene: React.FC<TimelineSceneProps> = ({ milestones }) => {
                 minHeight: 0,
               }}
             >
-              <MilestoneCard milestone={ms} progress={cardProgress} />
+              <MilestoneCard milestone={ms} enterFrame={entryFrame} />
             </div>
           );
         })}

@@ -1,4 +1,7 @@
 import { AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { linearTiming, TransitionSeries } from "@remotion/transitions";
+import { fade } from "@remotion/transitions/fade";
+import { slide } from "@remotion/transitions/slide";
 import {
   audio,
   scenes,
@@ -18,8 +21,8 @@ const BackgroundMusic: React.FC<{ totalDuration: number }> = ({ totalDuration })
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const fadeInFrames = fps * 2;  // 2 second fade-in
-  const fadeOutFrames = fps * 3; // 3 second fade-out
+  const fadeInFrames = fps * 2;
+  const fadeOutFrames = fps * 3;
 
   const volume = interpolate(
     frame,
@@ -37,64 +40,99 @@ const BackgroundMusic: React.FC<{ totalDuration: number }> = ({ totalDuration })
   );
 };
 
+/** Pick transition style based on scene types */
+function getTransition(fromType: string, toType: string, fps: number) {
+  // Title → feature: fade
+  if (fromType === "title") {
+    return { presentation: fade(), timing: linearTiming({ durationInFrames: Math.round(fps * 0.8) }) };
+  }
+  // Feature → feature: slide
+  if (fromType === "feature" && toType === "feature") {
+    return { presentation: slide({ direction: "from-right" }), timing: linearTiming({ durationInFrames: Math.round(fps * 0.5) }) };
+  }
+  // Feature → timeline: fade
+  if (toType === "timeline") {
+    return { presentation: fade(), timing: linearTiming({ durationInFrames: Math.round(fps * 0.8) }) };
+  }
+  // Timeline → outro: fade
+  if (fromType === "timeline" || toType === "outro") {
+    return { presentation: fade(), timing: linearTiming({ durationInFrames: Math.round(fps * 1.0) }) };
+  }
+  // Default: fade
+  return { presentation: fade(), timing: linearTiming({ durationInFrames: Math.round(fps * 0.6) }) };
+}
+
 export const DemoVideo: React.FC = () => {
   const { fps } = useVideoConfig();
-  let frameOffset = 0;
+  const totalDuration = getTotalDuration(scenes, fps);
 
-  const sceneElements = scenes.map((scene, i) => {
-    const durationInFrames = Math.round(scene.durationInSeconds * fps);
-    const from = frameOffset;
-    frameOffset += durationInFrames;
-
-    let content: React.ReactNode;
+  // Build scene content list for TransitionSeries
+  const sceneContents = scenes.map((scene) => {
     switch (scene.type) {
       case "title":
-        content = <TitleScene />;
-        break;
+        return <TitleScene />;
       case "feature":
-        content = <FeatureScene config={scene as FeatureSceneConfig} />;
-        break;
+        return <FeatureScene config={scene as FeatureSceneConfig} />;
       case "timeline":
-        content = <TimelineScene milestones={(scene as TimelineSceneConfig).milestones} />;
-        break;
+        return <TimelineScene milestones={(scene as TimelineSceneConfig).milestones} />;
       case "outro":
-        content = <OutroScene />;
-        break;
+        return <OutroScene />;
     }
+  });
+
+  // Build subtitle sequences with absolute frame offsets
+  let subtitleOffset = 0;
+  const subtitleElements = scenes.map((scene, i) => {
+    const durationInFrames = Math.round(scene.durationInSeconds * fps);
+    const from = subtitleOffset;
+    subtitleOffset += durationInFrames;
 
     return (
-      <Sequence
-        key={i}
-        from={from}
-        durationInFrames={durationInFrames}
-        name={
-          scene.type === "feature"
-            ? ((scene as FeatureSceneConfig).title ?? `Feature ${i}`)
-            : scene.type === "timeline"
-              ? "Under the Hood"
-              : scene.type
-        }
-      >
-        {content}
-
-        {/* Per-scene voiceover */}
+      <Sequence key={`sub-${i}`} from={from} durationInFrames={durationInFrames}>
         {scene.voiceover && (
           <Audio src={staticFile(scene.voiceover)} volume={audio.voiceoverVolume} />
         )}
-
-        {/* Subtitles */}
         {scene.subtitles && <Subtitle segments={scene.subtitles} />}
       </Sequence>
     );
   });
 
-  const totalDuration = getTotalDuration(scenes, fps);
-
   return (
     <AbsoluteFill style={{ background: theme.colors.background }}>
-      {sceneElements}
+      {/* Scene transitions */}
+      <TransitionSeries>
+        {sceneContents.map((content, i) => {
+          const durationInFrames = Math.round(scenes[i].durationInSeconds * fps);
+          const elements: React.ReactNode[] = [];
 
-      {/* Global background music with fade-in/fade-out */}
+          // Add transition before this scene (except the first)
+          if (i > 0) {
+            const trans = getTransition(scenes[i - 1].type, scenes[i].type, fps);
+            elements.push(
+              <TransitionSeries.Transition
+                key={`t-${i}`}
+                presentation={trans.presentation}
+                timing={trans.timing}
+              />
+            );
+          }
+
+          elements.push(
+            <TransitionSeries.Sequence key={`s-${i}`} durationInFrames={durationInFrames}>
+              {content}
+            </TransitionSeries.Sequence>
+          );
+
+          return elements;
+        })}
+      </TransitionSeries>
+
+      {/* Subtitles + voiceover layer (above transitions) */}
+      <AbsoluteFill style={{ zIndex: 20 }}>
+        {subtitleElements}
+      </AbsoluteFill>
+
+      {/* Global background music */}
       {audio.backgroundMusic && (
         <Sequence from={0} durationInFrames={totalDuration} name="Background Music">
           <BackgroundMusic totalDuration={totalDuration} />

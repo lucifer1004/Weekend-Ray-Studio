@@ -1,4 +1,4 @@
-import { Audio, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { Audio, Easing, interpolate, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { SubtitleSegment } from "../demo.config";
 import { theme } from "../lib/theme";
 
@@ -11,15 +11,21 @@ const SubtitleText: React.FC<{ segment: SubtitleSegment; durationInFrames: numbe
   durationInFrames,
 }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
-  const fadeIn = interpolate(frame, [0, 8], [0, 1], {
+  // Spring entrance
+  const entrance = spring({
+    frame,
+    fps,
+    config: { damping: 18, mass: 0.6, stiffness: 140 },
+  });
+  // Smooth fade out
+  const fadeOut = interpolate(frame, [durationInFrames - 10, durationInFrames], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
   });
-  const fadeOut = interpolate(frame, [durationInFrames - 8, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const slideY = 12 * (1 - entrance);
 
   return (
     <div
@@ -30,7 +36,8 @@ const SubtitleText: React.FC<{ segment: SubtitleSegment; durationInFrames: numbe
         right: 0,
         display: "flex",
         justifyContent: "center",
-        opacity: Math.min(fadeIn, fadeOut),
+        opacity: Math.min(entrance, fadeOut),
+        transform: `translateY(${slideY}px)`,
         zIndex: 20,
       }}
     >
