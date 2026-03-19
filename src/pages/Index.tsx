@@ -45,7 +45,7 @@ function useDraggableDivider(initialWidth: number, minWidth: number, maxWidth: n
 const DragHandle = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
   <div
     onMouseDown={onMouseDown}
-    className="w-[5px] cursor-col-resize hover:bg-[var(--color-brand)] active:bg-[var(--color-brand)] transition-colors flex-shrink-0"
+    className="w-[5px] cursor-col-resize hover:bg-[var(--color-brand)] active:bg-[var(--color-brand)] transition-colors shrink-0"
     style={{ background: 'var(--border-color-base)' }}
     title="Drag to resize"
   />
@@ -269,7 +269,7 @@ const Index = () => {
         {/* Object list panel */}
         <div
           style={{ width: panel1.width }}
-          className="flex flex-col bg-[var(--background-color-surface-base)] flex-shrink-0"
+          className="flex flex-col bg-[var(--background-color-surface-base)] shrink-0"
         >
           <ObjectControls
             scene={scene}
@@ -287,7 +287,7 @@ const Index = () => {
         <DragHandle onMouseDown={panel1.onMouseDown} />
 
         {/* Editor panel */}
-        <div style={{ width: panel2.width }} className="flex flex-col flex-shrink-0">
+        <div style={{ width: panel2.width }} className="flex flex-col shrink-0">
           <div className="px-4 py-2 border-b border-[var(--border-color-base)] bg-[var(--background-color-surface-raised)]">
             <Text kind="label/regular/md">Scene DSL</Text>
             <p className="text-xs text-[var(--text-color-secondary)] mt-0.5">

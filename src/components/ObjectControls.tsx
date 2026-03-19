@@ -35,7 +35,7 @@ const MaterialSwatch = ({
   if (isGround) {
     return (
       <span
-        className="w-3 h-3 rounded-sm flex-shrink-0 border border-[var(--border-color-base)]"
+        className="w-3 h-3 rounded-sm shrink-0 border border-[var(--border-color-base)]"
         style={{ backgroundColor: color }}
       />
     );
@@ -43,7 +43,7 @@ const MaterialSwatch = ({
   if (material === 'dielectric') {
     return (
       <span
-        className="w-3 h-3 rounded-full flex-shrink-0"
+        className="w-3 h-3 rounded-full shrink-0"
         style={{ border: '1.5px dashed var(--text-color-secondary)' }}
       />
     );
@@ -51,7 +51,7 @@ const MaterialSwatch = ({
   if (material === 'metal') {
     return (
       <span
-        className="w-3 h-3 rounded-full flex-shrink-0"
+        className="w-3 h-3 rounded-full shrink-0"
         style={{
           backgroundColor: color,
           boxShadow: '0 0 0 1.5px rgba(255,255,255,0.6), 0 0 0 2.5px rgba(255,255,255,0.15)',
@@ -62,7 +62,7 @@ const MaterialSwatch = ({
   // lambertian
   return (
     <span
-      className="w-3 h-3 rounded-full flex-shrink-0 border border-[var(--border-color-base)]"
+      className="w-3 h-3 rounded-full shrink-0 border border-[var(--border-color-base)]"
       style={{ backgroundColor: color }}
     />
   );
@@ -132,7 +132,7 @@ const Slider = ({
   onChange: (v: number) => void;
 }) => (
   <div className="flex items-center gap-2">
-    <span className="text-[10px] text-[var(--text-color-secondary)] w-6 flex-shrink-0">
+    <span className="text-[10px] text-[var(--text-color-secondary)] w-6 shrink-0">
       {label}
     </span>
     <input
@@ -280,7 +280,7 @@ export const ObjectControls = ({
           <button
             className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-[var(--background-color-surface-raised)] transition-colors ${
               selectedIndex === -1
-                ? 'bg-[var(--background-color-surface-raised)] ring-1 ring-inset ring-[var(--color-brand)]'
+                ? 'bg-[var(--background-color-surface-raised)] ring-1 inset-ring ring-[var(--color-brand)]'
                 : ''
             }`}
             onClick={() => {
@@ -371,7 +371,7 @@ export const ObjectControls = ({
           <button
             className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-[var(--background-color-surface-raised)] transition-colors ${
               selectedIndex === -2
-                ? 'bg-[var(--background-color-surface-raised)] ring-1 ring-inset ring-[var(--color-brand)]'
+                ? 'bg-[var(--background-color-surface-raised)] ring-1 inset-ring ring-[var(--color-brand)]'
                 : ''
             }`}
             onClick={() => {
@@ -431,7 +431,7 @@ export const ObjectControls = ({
               <button
                 className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-[var(--background-color-surface-raised)] transition-colors ${
                   isSelected
-                    ? 'bg-[var(--background-color-surface-raised)] ring-1 ring-inset ring-[var(--color-brand)]'
+                    ? 'bg-[var(--background-color-surface-raised)] ring-1 inset-ring ring-[var(--color-brand)]'
                     : ''
                 }`}
                 onClick={() => {

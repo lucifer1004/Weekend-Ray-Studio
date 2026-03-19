@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer nvidia, theme, base, components, utilities;
+
+@import "https://webassets.nvidia.com/kaizen-ui-foundations/0.604.1/theme.css" layer(nvidia);
+@import "https://webassets.nvidia.com/kaizen-ui-foundations/0.604.1/components.css" layer(nvidia);
+@import "tailwindcss";
+@source "../node_modules/@nvidia/foundations-react-core/**/*.{js,ts,jsx,tsx}";
 
 /* KUI theme variables are automatically provided by the Tailwind plugin */
 
