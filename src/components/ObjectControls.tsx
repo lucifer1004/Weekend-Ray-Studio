@@ -23,7 +23,15 @@ const MATERIAL_TYPE_MAP: Record<number, string> = {
   2: 'dielectric',
 };
 
-const MaterialSwatch = ({ material, color, isGround }: { material: string; color: string; isGround: boolean }) => {
+const MaterialSwatch = ({
+  material,
+  color,
+  isGround,
+}: {
+  material: string;
+  color: string;
+  isGround: boolean;
+}) => {
   if (isGround) {
     return (
       <span
@@ -44,7 +52,10 @@ const MaterialSwatch = ({ material, color, isGround }: { material: string; color
     return (
       <span
         className="w-3 h-3 rounded-full flex-shrink-0"
-        style={{ backgroundColor: color, boxShadow: '0 0 0 1.5px rgba(255,255,255,0.6), 0 0 0 2.5px rgba(255,255,255,0.15)' }}
+        style={{
+          backgroundColor: color,
+          boxShadow: '0 0 0 1.5px rgba(255,255,255,0.6), 0 0 0 2.5px rgba(255,255,255,0.15)',
+        }}
       />
     );
   }
@@ -276,7 +287,11 @@ export const ObjectControls = ({
               const selecting = selectedIndex !== -1;
               onSelect(selecting ? -1 : null);
               if (selecting) {
-                setCollapsed((prev) => { const next = new Set(prev); next.delete(-1); return next; });
+                setCollapsed((prev) => {
+                  const next = new Set(prev);
+                  next.delete(-1);
+                  return next;
+                });
               }
               onScrollTo?.(-1);
             }}
@@ -363,13 +378,19 @@ export const ObjectControls = ({
               const selecting = selectedIndex !== -2;
               onSelect(selecting ? -2 : null);
               if (selecting) {
-                setCollapsed((prev) => { const next = new Set(prev); next.delete(-2); return next; });
+                setCollapsed((prev) => {
+                  const next = new Set(prev);
+                  next.delete(-2);
+                  return next;
+                });
               }
             }}
           >
             <span className="text-xs">{collapsed.has(-2) ? '▶' : '▼'}</span>
             <span className="text-sm">⬜</span>
-            <span className="text-xs font-medium text-[var(--text-color-primary)]">Ground Tilt</span>
+            <span className="text-xs font-medium text-[var(--text-color-primary)]">
+              Ground Tilt
+            </span>
           </button>
           {!collapsed.has(-2) && selectedIndex === -2 && (
             <div className="px-3 pb-2 space-y-1.5">
@@ -455,7 +476,9 @@ export const ObjectControls = ({
                 <div className="px-3 pb-2 space-y-1.5">
                   {/* Name */}
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[var(--text-color-secondary)] w-10">Name</span>
+                    <span className="text-[10px] text-[var(--text-color-secondary)] w-10">
+                      Name
+                    </span>
                     <input
                       type="text"
                       value={sphere.name || ''}

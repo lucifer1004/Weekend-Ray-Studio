@@ -24,11 +24,7 @@ function normalize(v: Vec3): Vec3 {
   return len > 1e-8 ? scale(v, 1 / len) : [0, 0, 0];
 }
 function cross(a: Vec3, b: Vec3): Vec3 {
-  return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0],
-  ];
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
 function quatMultiply(a: Quat, b: Quat): Quat {
@@ -245,9 +241,13 @@ export function stepPhysics(
 
   while (state.accumulator >= FIXED_DT) {
     stepOnce(
-      state.positions, state.velocities,
-      state.angularVelocities, state.orientations,
-      spheres, ground, FIXED_DT
+      state.positions,
+      state.velocities,
+      state.angularVelocities,
+      state.orientations,
+      spheres,
+      ground,
+      FIXED_DT
     );
     state.accumulator -= FIXED_DT;
   }

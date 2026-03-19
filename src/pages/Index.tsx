@@ -8,7 +8,6 @@ import type { CameraData, SphereData } from '../gpu/raytracer';
 import { createPhysicsState, type PhysicsState, stepPhysics } from '../lib/physics';
 import { DEFAULT_SCENE, parseSceneDSL } from '../lib/scene-dsl';
 
-
 function useDraggableDivider(initialWidth: number, minWidth: number, maxWidth: number) {
   const [width, setWidth] = useState(initialWidth);
   const dragging = useRef(false);
@@ -109,9 +108,7 @@ const Index = () => {
       // If paused with simSpheres, update the simulated positions directly
       setSimSpheres((prev) => {
         if (!prev) return prev;
-        return prev.map((s, i) =>
-          i === sphereIndex ? { ...s, center: newCenter } : s
-        );
+        return prev.map((s, i) => (i === sphereIndex ? { ...s, center: newCenter } : s));
       });
 
       const currentCode = codeRef.current;

@@ -55,14 +55,19 @@ export class RayTracer {
     this.device = await adapter.requestDevice();
 
     const module = this.device.createShaderModule({ code: shaderCode });
-    
+
     // Check shader compilation
     const compInfo = module.getCompilationInfo();
-    compInfo.then((info) => {
-      if (info.messages.length > 0) {
-        console.error('Shader compilation errors:', info.messages.map((m) => `${m.type}: ${m.message}`).join('\n'));
-      }
-    }).catch((e) => console.error('Shader compilation info failed:', e));
+    compInfo
+      .then((info) => {
+        if (info.messages.length > 0) {
+          console.error(
+            'Shader compilation errors:',
+            info.messages.map((m) => `${m.type}: ${m.message}`).join('\n')
+          );
+        }
+      })
+      .catch((e) => console.error('Shader compilation info failed:', e));
 
     this.pipeline = this.device.createComputePipeline({
       layout: 'auto',
@@ -190,7 +195,13 @@ export class RayTracer {
       sf[base + 14] = q[2]; // y
       sf[base + 15] = q[3]; // z
     }
-    this.device.queue.writeBuffer(this.sphereBuffer, 0, this.sphereData, 0, 64 * Math.max(spheres.length, 1));
+    this.device.queue.writeBuffer(
+      this.sphereBuffer,
+      0,
+      this.sphereData,
+      0,
+      64 * Math.max(spheres.length, 1)
+    );
 
     // Dispatch
     const encoder = this.device.createCommandEncoder();
