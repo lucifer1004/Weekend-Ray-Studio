@@ -36,7 +36,7 @@ const SubtitleText: React.FC<{ segment: SubtitleSegment; durationInFrames: numbe
     >
       <div
         style={{
-          background: "rgba(0, 0, 0, 0.7)",
+          background: "rgba(0, 0, 0, 0.45)",
           backdropFilter: "blur(8px)",
           borderRadius: 8,
           padding: "10px 24px",

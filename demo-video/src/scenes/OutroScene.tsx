@@ -1,6 +1,8 @@
 import {
   AbsoluteFill,
+  Video,
   interpolate,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
@@ -22,7 +24,6 @@ export const OutroScene: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: `radial-gradient(ellipse at 50% 50%, ${theme.colors.surface} 0%, ${theme.colors.background} 70%)`,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -30,6 +31,29 @@ export const OutroScene: React.FC = () => {
         opacity: fadeOut,
       }}
     >
+      {/* Background image */}
+      <Video
+        src={staticFile("images/outro.mp4")}
+        volume={0}
+        playbackRate={0.5}
+        pauseWhenBuffering
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 0.35,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 70%)",
+        }}
+      />
+      {/* Content — above background */}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
       {/* Closing bullet points */}
       <div
         style={{
@@ -137,6 +161,7 @@ export const OutroScene: React.FC = () => {
           {meta.author} — {meta.event}
         </p>
       </FadeIn>
+      </div>
     </AbsoluteFill>
   );
 };

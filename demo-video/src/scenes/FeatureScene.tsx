@@ -77,13 +77,14 @@ export const FeatureScene: React.FC<FeatureSceneProps> = ({ config }) => {
 
   return (
     <AbsoluteFill style={{ background: theme.colors.background, opacity }}>
-      {/* Video clip or placeholder */}
+      {/* Video clip or placeholder — z-index 0, below overlays */}
       {config.clip ? (
         <AbsoluteFill
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            zIndex: 0,
           }}
         >
           <Video
@@ -105,24 +106,21 @@ export const FeatureScene: React.FC<FeatureSceneProps> = ({ config }) => {
         <div
           style={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            padding: "20px 40px",
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)",
+            zIndex: 15,
+            bottom: 20,
+            right: 30,
             opacity: titleOpacity,
-            transform: `translateY(${titleSlide}px)`,
           }}
         >
           <span
             style={{
               color: theme.colors.primary,
-              fontSize: 18,
+              fontSize: 24,
               fontFamily: theme.fonts.mono,
-              fontWeight: 600,
+              fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: 2,
+              textShadow: "0 2px 8px rgba(0,0,0,0.8)",
             }}
           >
             {config.title}

@@ -1,6 +1,8 @@
 import {
   AbsoluteFill,
+  Video,
   interpolate,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
@@ -22,7 +24,6 @@ export const TitleScene: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: `radial-gradient(ellipse at 50% 40%, ${theme.colors.surface} 0%, ${theme.colors.background} 70%)`,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -30,6 +31,30 @@ export const TitleScene: React.FC = () => {
         opacity: fadeOut,
       }}
     >
+      {/* Background image */}
+      <Video
+        src={staticFile("images/intro.mp4")}
+        volume={0}
+        playbackRate={0.5}
+        pauseWhenBuffering
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 0.4,
+        }}
+      />
+      {/* Dark overlay for text readability */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 70%)",
+        }}
+      />
+      {/* Text content — above background */}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
       {/* Event badge */}
       <FadeIn delay={5} duration={15} slideUp={10}>
         <div
@@ -162,6 +187,7 @@ export const TitleScene: React.FC = () => {
           "{meta.problem}"
         </p>
       </FadeIn>
+      </div>
     </AbsoluteFill>
   );
 };

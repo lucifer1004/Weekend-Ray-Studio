@@ -55,11 +55,18 @@ export interface FeatureScene {
   subtitles?: SubtitleSegment[];
 }
 
+export interface TimelineMetric {
+  value: string;
+  label: string;
+}
+
 export interface TimelineMilestone {
   agent: string;
   date: string;
   headline: string;
+  metrics?: TimelineMetric[];
   details: string[];
+  tags?: string[];
   color?: string;
 }
 
@@ -111,9 +118,9 @@ export const meta = {
 // ─── Audio ───────────────────────────────────────────────────────
 export const audio = {
   backgroundMusic: "music/bgm.mp3" as string | undefined,
-  musicVolume: 0.15,
+  musicVolume: 0.08,
   voiceover: undefined as string | undefined,
-  voiceoverVolume: 1.0,
+  voiceoverVolume: 2.0,
 };
 
 // ─── Subtitle helper ─────────────────────────────────────────────
@@ -168,6 +175,11 @@ export const scenes: DemoScene[] = [
     durationInSeconds: 36,
     ...clip(clips.pitch, 36),
     title: "The Elevator Pitch",
+    annotations: [
+      { atSecond: 2, duration: 6, text: "Real-time WebGPU path tracing in the browser", position: "top-left" as const },
+      { atSecond: 10, duration: 6, text: "JSX-like DSL + drag-and-drop interaction", position: "top-right" as const },
+      { atSecond: 20, duration: 12, text: "Built entirely with AI agents: Lovable + Claude Code", position: "top-left" as const },
+    ],
     subtitles: subs([
       [7.6, "We built Weekend Ray Studio — a real-time WebGPU path tracer that runs entirely in the browser.", "clips/vo-2-pitch-0.wav"],
       [11.7, "You write scenes in a JSX-like DSL, drag spheres in the viewport, and watch physics simulations with rolling and collisions — all rendered live.", "clips/vo-2-pitch-1.wav"],
@@ -185,6 +197,10 @@ export const scenes: DemoScene[] = [
     durationInSeconds: 22,
     ...clip(clips.render, 22),
     title: "GPU Ray Tracing",
+    annotations: [
+      { atSecond: 1, duration: 8, text: "Progressive path tracing converges in real-time", position: "top-left" as const },
+      { atSecond: 11, duration: 8, text: "Reflections, refractions, soft shadows — all on the GPU", position: "top-right" as const },
+    ],
     subtitles: subs([
       [9.0, "Here's the renderer in action. Each frame traces rays through the scene on the GPU using WebGPU compute shaders.", "clips/vo-3a-rendering-0.wav"],
       [11.7, "You can see it converge from noise to a clean image in seconds. Reflections, refractions through glass, soft shadows — all path traced in real time.", "clips/vo-3a-rendering-1.wav"],
@@ -197,6 +213,10 @@ export const scenes: DemoScene[] = [
     durationInSeconds: 20,
     ...clip(clips.editor, 20),
     title: "Scene Editor",
+    annotations: [
+      { atSecond: 1, duration: 8, text: "Write scenes in a JSX-like DSL with live preview", position: "top-left" as const },
+      { atSecond: 10, duration: 8, text: "Drag spheres, change materials in real-time", position: "top-right" as const },
+    ],
     subtitles: subs([
       [8.9, "The scene editor lets you build worlds visually. Write sphere and camera tags in the DSL, or use the sidebar controls.", "clips/vo-3b-editor-0.wav"],
       [9.1, "Click and drag any sphere directly in the viewport to reposition it. Changes update the ray-traced preview instantly.", "clips/vo-3b-editor-1.wav"],
@@ -209,6 +229,10 @@ export const scenes: DemoScene[] = [
     durationInSeconds: 19,
     ...clip(clips.play1, 19),
     title: "Physics Simulation",
+    annotations: [
+      { atSecond: 1, duration: 7, text: "Elastic collisions with gravity and rolling", position: "top-left" as const },
+      { atSecond: 9, duration: 8, text: "Tilt the ground — watch balls roll with visible rotation", position: "top-right" as const },
+    ],
     subtitles: subs([
       [7.1, "Hit play and the physics engine takes over. Spheres bounce with elastic collisions and roll across the ground.", "clips/vo-3c-physics-0.wav"],
       [9.6, "Tilt the ground plane and watch gravity pull them downhill. The UV grid lines on each sphere make the rotation clearly visible.", "clips/vo-3c-physics-1.wav"],
@@ -227,44 +251,72 @@ export const scenes: DemoScene[] = [
         date: "Mar 16 — Evening",
         headline: "One prompt → full scaffold",
         color: "#e74c3c",
+        metrics: [
+          { value: "1", label: "prompt" },
+          { value: "12", label: "bounces" },
+          { value: "3", label: "materials" },
+        ],
         details: [
           "WebGPU compute shader ray tracer",
           "Monaco editor with React-like DSL",
-          "Live preview with progressive rendering",
+          "Live progressive rendering",
+          "Lambertian, Metal, Dielectric",
         ],
+        tags: ["WebGPU", "WGSL", "React", "Vite"],
       },
       {
         agent: "Lovable",
         date: "Mar 17 — Morning",
         headline: "Interaction & physics",
         color: "#e74c3c",
+        metrics: [
+          { value: "120", label: "Hz physics" },
+          { value: "6", label: "controls" },
+          { value: "3", label: "camera modes" },
+        ],
         details: [
           "Sphere dragging with wireframe overlay",
-          "Physics engine with elastic collisions",
-          "Camera orbit, zoom, and pan controls",
+          "Impulse-based elastic collisions",
+          "Camera orbit, zoom, and pan",
+          "Velocity & elasticity per sphere",
         ],
+        tags: ["Physics", "Ray casting", "DSL"],
       },
       {
         agent: "Claude Code",
         date: "Mar 19 — Daytime",
         headline: "Deep refinement & debugging",
         color: "#76b900",
+        metrics: [
+          { value: "4", label: "bugs fixed" },
+          { value: "8×4", label: "UV grid" },
+          { value: "11", label: "files changed" },
+        ],
         details: [
           "Quaternion rolling with UV grid lines",
-          "Fixed shader alignment & tilt bugs",
-          "Tilted-plane collision in normal space",
+          "Shader uniform alignment fix",
+          "Tilted-plane friction in normal space",
+          "Ground checkerboard pattern",
         ],
+        tags: ["Quaternion", "WGSL", "Normal space"],
       },
       {
         agent: "Claude Code",
         date: "Mar 19 — Evening",
         headline: "Demo video & voice",
         color: "#76b900",
+        metrics: [
+          { value: "18", label: "voice clips" },
+          { value: "7", label: "scenes" },
+          { value: "3:30", label: "runtime" },
+        ],
         details: [
           "Remotion template with config-driven scenes",
-          "AI voice cloning & TTS voiceover",
+          "Qwen3-TTS voice cloning from 10s sample",
+          "Per-segment audio with subtitle sync",
           "This video was built by an agent too",
         ],
+        tags: ["Remotion", "Qwen3-TTS", "MLX"],
       },
     ],
     subtitles: subs([
